@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from torch.utils.data import DataLoader
 from src.torch_vision_dataset import TorchVisionDataset
 from configs.config import (
     WORKSPACE,
@@ -23,7 +23,7 @@ def main() -> None:
         max_images=3,
     )
 
-    from torch.utils.data import DataLoader
+
 
     train_loader = DataLoader(
         dataset,

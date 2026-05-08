@@ -71,6 +71,13 @@ PARTNER_COLOR = (50, 160, 150)
 MIDPOINT_COLOR = (240, 200, 60)
 ALFA_VALUE = 0.5
 NN_CLASS_COLORS = {
+    0: (128, 0, 32),  # burgundy
+    1: (75, 0, 130),  # indigo
+    2: (85, 107, 47),  # moss green / dark olive green
+    3: (255, 191, 0),  # amber
+}
+
+NN_CLASS_COLORS_GT = {
     0: (160, 20, 60),     # brighter burgundy / crimson
     1: (30, 90, 220),     # strong royal blue
     2: (0, 170, 110),     # bright emerald
