@@ -24,6 +24,16 @@ def main():
         image_path = image_dir / f"{annotation_path.stem}.jpg"
 
         if not image_path.exists():
+
+
+
+
+
+
+
+
+
+
             print(f"missing image for: {annotation_path.name}")
             continue
 

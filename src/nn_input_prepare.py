@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from configs.config import (NN_ANN_EXT,
                             NN_MIN_BOX_WIDTH,
                             NN_MIN_BOX_HEIGHT,
@@ -45,6 +47,25 @@ class NNSample:
 
     meta: dict[str, Any] = field(default_factory=dict)
 
+
+@dataclass(frozen=True)
+class DerivedAnnotationConfig:
+    split_path: Path
+    image_dir: Path
+    src_annotation_dir: Path
+    dst_annotation_dir: Path
+    dst_annotation_format_path: Path
+    source_annotation_format_path: Path
+
+    class_ids_initial: tuple[int, ...]
+    class_ids_merged: tuple[int, ...]
+    derived_class_names: dict[int, str]
+
+    bbox_scale_rules: tuple[BBoxScaleRule, ...] = ()
+
+    annotation_format_name: str = "derived_annotations_v1"
+    ann_ext: str = NN_ANN_EXT
+    max_images: int | None = None
 
 
 def resolve_annotation_path(image_path: Path, ann_ext: str = NN_ANN_EXT) -> Path:
@@ -266,7 +287,8 @@ def pair_images_with_annotations(
 ) -> list[tuple[Path, Path | None]]:
     """
 
-    TODO: OBSOLETE DELETE THIS FUNCTION
+    TODO: OBSOLETE DELETE THIS FUNCTION.
+    TODO:2 I guess it is not that obsolete after all haha
     Scan a directory for image files and pair each image with its matching
     annotation path.
 
@@ -358,6 +380,608 @@ def parse_annotation_txt_rc(
         boxes_arr = np.empty((0, 4), dtype=np.float32)
 
     return labels_arr, boxes_arr
+
+
+"""
+Utilities for deriving copied/redacted box annotations from source annotations.
+
+Original annotation files are never overwritten.
+
+Source annotation format:
+    class row_min col_min row_max col_max
+"""
+
+def select_annotation_rows(
+    source,
+    selection: None | int | Sequence[int | Sequence[int]] = None,
+) -> list[int]:
+    """
+    Select annotation row indexes from a source annotation container.
+
+    Parameters
+    ----------
+    source
+        Annotation container used only for its length.
+
+        Examples:
+            labels_src
+            boxes_rc
+            annotation_rows
+
+    selection
+        Which annotation rows to select.
+
+        Supported forms:
+
+            None
+                Select all rows.
+
+            int
+                Select one row.
+
+            [start, end]
+                Select an inclusive range:
+                    start, start + 1, ..., end
+
+            [idx0, idx1, idx2, ...]
+                If length > 2, treat as explicit row indexes.
+
+            [[start, end], idx, [start2, end2]]
+                Mixed inclusive ranges and single row indexes.
+
+    Returns
+    -------
+    selected_indexes
+        Sorted unique list of selected annotation row indexes.
+
+    Notes
+    -----
+    Ranges are inclusive.
+    Therefore [10, 20] means:
+        10, 11, 12, ..., 20
+    """
+    num_annotations = len(source)
+
+    if selection is None:
+        return list(range(num_annotations))
+
+    selected_indexes: list[int] = []
+
+    def append_single_index(index: int) -> None:
+        index = int(index)
+
+        if index < 0 or index >= num_annotations:
+            raise IndexError(
+                f"Annotation row index {index} is out of range for "
+                f"{num_annotations} annotations"
+            )
+
+        selected_indexes.append(index)
+
+    def append_inclusive_range(start_index: int, end_index: int) -> None:
+        start_index = int(start_index)
+        end_index = int(end_index)
+
+        if end_index < start_index:
+            raise ValueError(
+                f"Inclusive range end must be >= start, "
+                f"got [{start_index}, {end_index}]"
+            )
+
+        while start_index <= end_index:
+            append_single_index(start_index)
+            start_index += 1
+
+    if isinstance(selection, int):
+        append_single_index(selection)
+        return sorted(set(selected_indexes))
+
+    if len(selection) == 2 and all(isinstance(item, int) for item in selection):
+        start_index, end_index = selection
+        append_inclusive_range(start_index, end_index)
+        return sorted(set(selected_indexes))
+
+    for item in selection:
+        if isinstance(item, int):
+            append_single_index(item)
+            continue
+
+        if len(item) == 2:
+            start_index, end_index = item
+            append_inclusive_range(start_index, end_index)
+            continue
+
+        for nested_item in item:
+            append_single_index(nested_item)
+
+    return sorted(set(selected_indexes))
+
+
+def merge_classes(
+    labels_src: np.ndarray,
+    *,
+    class_ids_initial: tuple[int, ...],
+    class_ids_merged: tuple[int, ...],
+    idxs_to_edit: list[int] | None = None,
+    annotation_path: str | Path | None = None,
+) -> np.ndarray:
+    """
+    Remap / merge source class IDs for selected annotation rows.
+
+    Parameters
+    ----------
+    labels_src
+        Source labels from one annotation txt file.
+
+        Shape:
+            (N,)
+
+        Example:
+            [0, 1, 2, 3, 2]
+
+    class_ids_initial
+        Original class IDs before remapping.
+
+        Example:
+            (0, 1, 2, 3)
+
+    class_ids_merged
+        New class IDs after remapping.
+
+        Example:
+            (0, 0, 1, 2)
+
+        Together with class_ids_initial, this means:
+            0 -> 0
+            1 -> 0
+            2 -> 1
+            3 -> 2
+
+    idxs_to_edit
+        Annotation row indexes to edit.
+
+        These are row indexes inside labels_src, not class IDs.
+
+        If None, all annotation rows are edited.
+
+        Example:
+            idxs_to_edit = [0, 2, 5]
+
+        means:
+            edit labels_src[0], labels_src[2], labels_src[5]
+
+    annotation_path
+        Optional annotation file path.
+
+        Used only for clearer error messages.
+
+    Returns
+    -------
+    labels_out
+        Remapped labels array, dtype int64.
+
+        Shape:
+            (N,)
+
+    Notes
+    -----
+    This function edits class labels only.
+
+    It does not:
+        - edit bounding boxes,
+        - delete annotation rows,
+        - save files,
+        - convert labels to TorchVision BG0 format.
+
+    The remapping relation is internally represented as:
+
+        class_ids_remap = {
+            old_class_id: new_class_id
+        }
+
+    For the current redacted annotation plan:
+
+        class_ids_initial = (0, 1, 2, 3)
+        class_ids_merged  = (0, 0, 1, 2)
+
+    resulting derived classes are:
+
+        0 = merged_oval_loop
+        1 = black_dot
+        2 = other_defect
+    """
+    labels_src = np.asarray(labels_src, dtype=np.int64)
+
+    if labels_src.ndim != 1:
+        raise ValueError(
+            f"labels_src must have shape (N,), got {labels_src.shape}"
+        )
+
+    if len(class_ids_initial) != len(class_ids_merged):
+        raise ValueError(
+            "class_ids_initial and class_ids_merged must have the same length, "
+            f"got {len(class_ids_initial)} and {len(class_ids_merged)}"
+        )
+
+    class_ids_remap = {
+        int(initial): int(merged)
+        for initial, merged in zip(class_ids_initial, class_ids_merged)
+    }
+
+    labels_out = labels_src.copy()
+
+    if idxs_to_edit is None:
+        idxs_to_edit = select_annotation_rows(labels_out)
+
+    for row_idx in idxs_to_edit:
+        row_idx = int(row_idx)
+
+        if row_idx < 0 or row_idx >= len(labels_out):
+            raise IndexError(
+                f"Annotation row row_idx {row_idx} is out of range for "
+                f"{len(labels_out)} annotations"
+            )
+
+        old_class_id = int(labels_out[row_idx])
+
+        if old_class_id not in class_ids_remap:
+            where = f" in {annotation_path}" if annotation_path is not None else ""
+            raise ValueError(
+                f"Class id {old_class_id} at annotation row {row_idx}{where} "
+                f"is not present in class_ids_initial={class_ids_initial}"
+            )
+
+        labels_out[row_idx] = class_ids_remap[old_class_id]
+
+    return labels_out.astype(np.int64, copy=False)
+
+
+def edit_bbox_size(
+    boxes_rc: np.ndarray,
+    *,
+    idxs_to_edit: list[int] | None = None,
+    width_scale: float = 1.0,
+    height_scale: float = 1.0,
+    image_shape_hw: tuple[int, int] | None = None,
+    annotation_path: str | Path | None = None,
+) -> np.ndarray:
+    """
+    Scale selected boxes around their original center.
+    Parameters
+    ----------
+    boxes_rc
+        Box array with shape (N, 4):
+            [row_min, col_min, row_max, col_max]
+    idxs_to_edit
+        Annotation row indexes to edit.
+        If None, all boxes are edited.
+    width_scale
+        Multiplier for box width.
+    height_scale
+        Multiplier for box height.
+    image_shape_hw
+        Optional image shape:
+            (height, width)
+        If provided, edited boxes are clamped to image boundaries.
+    annotation_path
+        Optional path used only for clearer error messages.
+    Returns
+    -------
+    boxes_out
+        Edited box array with shape (N, 4), dtype float32.
+    Notes
+    -----
+    The box center stays fixed.
+    Extra width/height is split equally on both sides.
+    """
+    boxes_rc = np.asarray(boxes_rc, dtype=np.float32)
+
+    if boxes_rc.ndim != 2 or boxes_rc.shape[1] != 4:
+        raise ValueError(
+            f"boxes_rc must have shape (N, 4), got {boxes_rc.shape}"
+        )
+
+    if width_scale <= 0:
+        raise ValueError(f"width_scale must be > 0, got {width_scale}")
+
+    if height_scale <= 0:
+        raise ValueError(f"height_scale must be > 0, got {height_scale}")
+
+    boxes_out = boxes_rc.copy()
+
+    if idxs_to_edit is None:
+        idxs_to_edit = select_annotation_rows(boxes_out)
+
+    if image_shape_hw is not None:
+        image_height, image_width = image_shape_hw
+
+        if image_height <= 0 or image_width <= 0:
+            raise ValueError(
+                f"image_shape_hw must contain positive values, got {image_shape_hw}"
+            )
+
+    for row_idx in idxs_to_edit:
+        row_idx = int(row_idx)
+
+        if row_idx < 0 or row_idx >= len(boxes_out):
+            where = f" in {annotation_path}" if annotation_path is not None else ""
+            raise IndexError(
+                f"Annotation row index {row_idx}{where} is out of range for "
+                f"{len(boxes_out)} boxes"
+            )
+
+        row_min, col_min, row_max, col_max = boxes_out[row_idx]
+
+        box_height = row_max - row_min
+        box_width = col_max - col_min
+
+        if box_height <= 0:
+            where = f" in {annotation_path}" if annotation_path is not None else ""
+            raise ValueError(
+                f"Box at row {row_idx}{where} has non-positive height: "
+                f"row_min={row_min}, row_max={row_max}"
+            )
+
+        if box_width <= 0:
+            where = f" in {annotation_path}" if annotation_path is not None else ""
+            raise ValueError(
+                f"Box at row {row_idx}{where} has non-positive width: "
+                f"col_min={col_min}, col_max={col_max}"
+            )
+
+        row_center = 0.5 * (row_min + row_max)
+        col_center = 0.5 * (col_min + col_max)
+
+        new_height = box_height * float(height_scale)
+        new_width = box_width * float(width_scale)
+
+        new_row_min = row_center - 0.5 * new_height
+        new_row_max = row_center + 0.5 * new_height
+        new_col_min = col_center - 0.5 * new_width
+        new_col_max = col_center + 0.5 * new_width
+
+        if image_shape_hw is not None:
+            new_row_min = max(0.0, min(float(image_height), new_row_min))
+            new_row_max = max(0.0, min(float(image_height), new_row_max))
+            new_col_min = max(0.0, min(float(image_width), new_col_min))
+            new_col_max = max(0.0, min(float(image_width), new_col_max))
+
+        boxes_out[row_idx] = [
+            new_row_min,
+            new_col_min,
+            new_row_max,
+            new_col_max,
+        ]
+
+    return boxes_out.astype(np.float32, copy=False)
+
+def write_annotation_txt_rc(
+    *,
+    labels_src: np.ndarray,
+    boxes_rc: np.ndarray,
+    output_path: str | Path,
+    float_precision: int = 4,
+) -> None:
+    """
+    Write annotation txt in source row/col format:
+
+        class row_min col_min row_max col_max
+    """
+    labels_src = np.asarray(labels_src, dtype=np.int64)
+    boxes_rc = np.asarray(boxes_rc, dtype=np.float32)
+
+    if labels_src.ndim != 1:
+        raise ValueError(
+            f"labels_src must have shape (N,), got {labels_src.shape}"
+        )
+
+    if boxes_rc.ndim != 2 or boxes_rc.shape[1] != 4:
+        raise ValueError(
+            f"boxes_rc must have shape (N, 4), got {boxes_rc.shape}"
+        )
+
+    if len(labels_src) != len(boxes_rc):
+        raise ValueError(
+            f"labels_src and boxes_rc must have same length, "
+            f"got {len(labels_src)} and {len(boxes_rc)}"
+        )
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    fmt = f"{{:.{float_precision}f}}"
+
+    with output_path.open("w", encoding="utf-8") as f:
+        for label, box in zip(labels_src.tolist(), boxes_rc.tolist()):
+            row_min, col_min, row_max, col_max = box
+
+            line = (
+                f"{int(label)} "
+                f"{fmt.format(float(row_min))} "
+                f"{fmt.format(float(col_min))} "
+                f"{fmt.format(float(row_max))} "
+                f"{fmt.format(float(col_max))}\n"
+            )
+            f.write(line)
+
+
+def write_derived_annotation_format_json(
+    *,
+    output_path: str | Path,
+    annotation_format_name: str,
+    class_names: dict[int, str],
+    source_annotation_format: str | Path,
+    class_ids_initial: tuple[int, ...],
+    class_ids_merged: tuple[int, ...],
+    bbox_edit_notes: list[dict[str, Any]] | None = None,
+) -> None:
+    """
+    Write JSON describing a derived source-annotation set.
+
+    This JSON describes the copied/edited annotation txt files,
+    not TorchVision targets.
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    class_ids_remap = {
+        str(int(initial)): int(merged)
+        for initial, merged in zip(class_ids_initial, class_ids_merged)
+    }
+
+    payload = {
+        "annotation_format_name": annotation_format_name,
+        "annotation_format_role": "derived_source_annotations",
+
+        "annotation_format": "class row_min col_min row_max col_max",
+        "delimiter": "whitespace",
+        "has_header": False,
+
+        "class_column": 0,
+        "box_columns": [1, 2, 3, 4],
+
+        "source_box_format": "ROW_COL_MINMAX",
+        "source_label_base": 0,
+
+        "class_names": {
+            str(int(class_id)): str(class_name)
+            for class_id, class_name in class_names.items()
+        },
+
+        "source_annotation_format": str(source_annotation_format),
+
+        "derived_annotation_notes": {
+            "class_remap": class_ids_remap,
+            "bbox_edits": bbox_edit_notes or [],
+            "overwrites_originals": False,
+        },
+    }
+
+    with output_path.open("w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=4, ensure_ascii=False)
+
+def derive_box_annotations_from_src(
+    *,
+    split_path: str | Path,
+    image_dir: str | Path,
+    src_annotation_dir: str | Path,
+    dst_annotation_dir: str | Path,
+    dst_annotation_format_path: str | Path,
+    source_annotation_format_path: str | Path,
+    class_ids_initial: tuple[int, ...],
+    class_ids_merged: tuple[int, ...],
+    derived_class_names: dict[int, str],
+    black_dot_class_id_after_merge: int = 1,
+    black_dot_width_scale: float = 1.3,
+    black_dot_height_scale: float = 1.3,
+    annotation_format_name: str = "redacted_merged_ovals_expanded_black_dots_v1",
+    ann_ext: str = NN_ANN_EXT,
+    max_images: int | None = None,
+) -> list[dict]:
+    """
+    Derive copied box annotations from source annotations.
+
+    Current intended edit policy:
+        1. merge source classes:
+               0 -> 0
+               1 -> 0
+               2 -> 1
+               3 -> 2
+
+        2. expand black-dot boxes after merge:
+               derived class 1
+               width_scale  = 1.3
+               height_scale = 1.3
+
+    Original annotations are never overwritten.
+    """
+    dst_annotation_dir = ensure_dir(dst_annotation_dir)
+
+    pairs = pair_split_images_with_annotations(
+        split_path=split_path,
+        image_dir=image_dir,
+        annotation_dir=src_annotation_dir,
+        ann_ext=ann_ext,
+        require_annotation=True,
+        max_images=max_images,
+    )
+
+    records: list[dict] = []
+
+    for image_id, (image_path, src_annotation_path) in enumerate(pairs):
+        if src_annotation_path is None:
+            raise RuntimeError(
+                f"Internal error: annotation_path is None for {image_path}"
+            )
+
+        image = load_image(image_path)
+        image_height, image_width = image.shape[:2]
+
+        labels_src, boxes_rc = parse_annotation_txt_rc(src_annotation_path)
+
+        idxs_all = select_annotation_rows(labels_src)
+
+        labels_merged = merge_classes(
+            labels_src,
+            class_ids_initial=class_ids_initial,
+            class_ids_merged=class_ids_merged,
+            idxs_to_edit=idxs_all,
+            annotation_path=src_annotation_path,
+        )
+
+        black_dot_idxs = np.where(
+            labels_merged == int(black_dot_class_id_after_merge)
+        )[0].tolist()
+
+        boxes_edited = edit_bbox_size(
+            boxes_rc,
+            idxs_to_edit=black_dot_idxs,
+            width_scale=black_dot_width_scale,
+            height_scale=black_dot_height_scale,
+            image_shape_hw=(int(image_height), int(image_width)),
+            annotation_path=src_annotation_path,
+        )
+
+        dst_annotation_path = dst_annotation_dir / src_annotation_path.name
+
+        write_annotation_txt_rc(
+            labels_src=labels_merged,
+            boxes_rc=boxes_edited,
+            output_path=dst_annotation_path,
+        )
+
+        records.append(
+            {
+                "image_id": int(image_id),
+                "image_path": image_path,
+                "src_annotation_path": src_annotation_path,
+                "dst_annotation_path": dst_annotation_path,
+                "num_boxes": int(len(labels_src)),
+                "num_black_dot_boxes_expanded": int(len(black_dot_idxs)),
+                "image_shape_hw": (int(image_height), int(image_width)),
+            }
+        )
+
+    write_derived_annotation_format_json(
+        output_path=dst_annotation_format_path,
+        annotation_format_name=annotation_format_name,
+        class_names=derived_class_names,
+        source_annotation_format=source_annotation_format_path,
+        class_ids_initial=class_ids_initial,
+        class_ids_merged=class_ids_merged,
+        bbox_edit_notes=[
+            {
+                "target_class_after_merge": int(black_dot_class_id_after_merge),
+                "class_name": derived_class_names[int(black_dot_class_id_after_merge)],
+                "width_scale": float(black_dot_width_scale),
+                "height_scale": float(black_dot_height_scale),
+                "center_preserved": True,
+                "clamped_to_image_boundaries": True,
+            }
+        ],
+    )
+
+    return records
 
 
 def keep_xywh_boxes(
