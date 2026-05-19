@@ -48,7 +48,7 @@ class NNSample:
     meta: dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass(frozen=True)
+@dataclass
 class DerivedAnnotationConfig:
     split_path: Path
     image_dir: Path
@@ -61,8 +61,7 @@ class DerivedAnnotationConfig:
     class_ids_merged: tuple[int, ...]
     derived_class_names: dict[int, str]
 
-    bbox_scale_rules: tuple[BBoxScaleRule, ...] = ()
-
+    bbox_scale_rules: list[dict[str, Any]] = field(default_factory=list)
     annotation_format_name: str = "derived_annotations_v1"
     ann_ext: str = NN_ANN_EXT
     max_images: int | None = None
