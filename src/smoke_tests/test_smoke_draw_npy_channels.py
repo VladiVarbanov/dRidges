@@ -2,13 +2,13 @@ from pathlib import Path
 
 import numpy as np
 
-from .debug_io import save_rgba_tiff
-from .torch_vision_dataset import TorchVisionDataset
-from .utilities import rgba_from_gray
+from debug_io import save_rgba_tiff
+from torch_vision_dataset import TorchVisionDataset
+from utilities import rgba_from_gray
 
 
 def main():
-    root = Path("DataSetFinal")
+    root = Path("../../DataSetFinal")
 
     dataset = TorchVisionDataset(
         split_path=root / "trainimages.txt",
@@ -30,7 +30,7 @@ def main():
     print(f"npy shape: {nn_input.shape}")
     print(f"npy dtype: {nn_input.dtype}")
 
-    output_dir = Path("results/smoke_npy_channels")
+    output_dir = Path("../../results/smoke_npy_channels")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     for channel_index in range(nn_input.shape[0]):

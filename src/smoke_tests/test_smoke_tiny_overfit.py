@@ -44,8 +44,8 @@ def move_targets_to_device(targets, device):
 
 
 def main():
-    root = Path("DataSetFinal")
-    checkpoint_path = Path("checkpoints/test_smoke_tiny_overfit.pth")
+    root = Path("../../DataSetFinal")
+    checkpoint_path = Path("../../checkpoints/test_smoke_tiny_overfit.pth")
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
     #TODO: use config paths
     dataset = TorchVisionDataset(

@@ -9,7 +9,7 @@ from src.torch_vision_dataset import TorchVisionDataset
 
 
 def main():
-    root = Path("DataSetFinal")
+    root = Path("../../DataSetFinal")
 
     dataset = TorchVisionDataset(
         split_path=root / "trainimages.txt",

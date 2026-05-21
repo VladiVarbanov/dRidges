@@ -8,7 +8,7 @@ from src.torch_vision_dataset import TorchVisionDataset
 
 
 def main():
-    root = Path("DataSetFinal")
+    root = Path("../../DataSetFinal")
 
     dataset = TorchVisionDataset(
         split_path=root / "trainimages.txt",
@@ -29,7 +29,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    checkpoint_path = Path("checkpoints/test_smoke_tiny_overfit.pth")
+    checkpoint_path = Path("../../checkpoints/test_smoke_tiny_overfit.pth")
 
     checkpoint = torch.load(checkpoint_path, map_location=device)
 

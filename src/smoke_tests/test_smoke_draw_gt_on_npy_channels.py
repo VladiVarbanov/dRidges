@@ -3,15 +3,15 @@ from pathlib import Path
 import numpy as np
 
 from configs.config import NN_CLASS_COLORS_GT
-from .debug_io import save_rgba_tiff
-from .nn_adapters import label_ids_from_bg0_format, xyxy_to_xywh
-from .torch_vision_dataset import TorchVisionDataset
-from .utilities import rgba_from_gray
-from .visualization import paint_labeled_xywh_boxes_in_place
+from debug_io import save_rgba_tiff
+from nn_adapters import label_ids_from_bg0_format, xyxy_to_xywh
+from torch_vision_dataset import TorchVisionDataset
+from utilities import rgba_from_gray
+from visualization import paint_labeled_xywh_boxes_in_place
 
 
 def main():
-    root = Path("DataSetFinal")
+    root = Path("../../DataSetFinal")
 
     dataset = TorchVisionDataset(
         split_path=root / "trainimages.txt",
@@ -34,7 +34,7 @@ def main():
     labels_bg0 = target["labels"].detach().cpu().numpy()
     labels_source = label_ids_from_bg0_format(labels_bg0)
 
-    output_dir = Path("results/smoke_npy_channels_gt")
+    output_dir = Path("../../results/smoke_npy_channels_gt")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"source image: {image_path}")

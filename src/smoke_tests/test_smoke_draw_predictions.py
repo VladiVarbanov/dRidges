@@ -5,15 +5,15 @@ from torchvision.models.detection import fasterrcnn_resnet50_fpn
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 from configs.config import NN_CLASS_COLORS, NN_CLASS_COLORS_GT
-from .debug_io import save_rgba_tiff
-from .nn_adapters import xyxy_to_xywh, label_ids_from_bg0_format
-from .torch_vision_dataset import TorchVisionDataset
-from .utilities import load_image, rgba_from_gray
-from .visualization import paint_labeled_xywh_boxes_in_place
+from debug_io import save_rgba_tiff
+from nn_adapters import xyxy_to_xywh, label_ids_from_bg0_format
+from torch_vision_dataset import TorchVisionDataset
+from utilities import load_image, rgba_from_gray
+from visualization import paint_labeled_xywh_boxes_in_place
 
 
 def main():
-    root = Path("DataSetFinal")
+    root = Path("../../DataSetFinal")
 
     dataset = TorchVisionDataset(
         split_path=root / "trainimages.txt",
@@ -35,7 +35,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    checkpoint_path = Path("checkpoints/test_smoke_tiny_overfit.pth")
+    checkpoint_path = Path("../../checkpoints/test_smoke_tiny_overfit.pth")
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
 
@@ -86,7 +86,7 @@ def main():
         line_width=2,
     )
 
-    output_path = Path("results/smoke_predictions/prediction_vs_gt.tif")
+    output_path = Path("../../results/smoke_predictions/prediction_vs_gt.tif")
     save_rgba_tiff(image_rgba, output_path)
 
     print(f"source image: {source_image_path}")

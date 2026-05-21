@@ -1,16 +1,16 @@
 from pathlib import Path
 
 from configs.config import NN_CLASS_COLORS_GT
-from .debug_io import save_rgba_tiff
-from .nn_adapters import rows_cols_to_xywh
-from .nn_input_prepare import parse_annotation_txt_rc
-from .torch_vision_dataset import TorchVisionDataset
-from .utilities import load_image, rgba_from_gray
-from .visualization import paint_labeled_xywh_boxes_in_place
+from debug_io import save_rgba_tiff
+from nn_adapters import rows_cols_to_xywh
+from nn_input_prepare import parse_annotation_txt_rc
+from torch_vision_dataset import TorchVisionDataset
+from utilities import load_image, rgba_from_gray
+from visualization import paint_labeled_xywh_boxes_in_place
 
 
 def main():
-    root = Path("DataSetFinal")
+    root = Path("../../DataSetFinal")
 
     dataset = TorchVisionDataset(
         split_path=root / "trainimages.txt",
@@ -39,7 +39,7 @@ def main():
         line_width=4,
     )
 
-    output_dir = Path("results/smoke_source_annotations")
+    output_dir = Path("../../results/smoke_source_annotations")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     output_path = output_dir / f"{image_path.stem}_source_annotations_gt.tif"
