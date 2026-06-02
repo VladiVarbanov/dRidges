@@ -8,7 +8,7 @@ from configs.config import NN_ANN_EXT
 
 from debug_io import save_rgba_tiff
 from nn_adapters import rows_cols_to_xywh
-from nn_input_prepare import parse_annotation_txt_rc
+from nn_anotation_io import parse_annotation_txt_rc
 from preprocessing import to_gray_normalized
 from utilities import collect_images_paths, load_image, rgba_from_gray
 from visualization import paint_labeled_xywh_boxes_in_place

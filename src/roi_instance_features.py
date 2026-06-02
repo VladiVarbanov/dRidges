@@ -1,4 +1,4 @@
-# src/object_features.py
+# src/roi_instance_features.py
 from __future__ import annotations
 
 import numpy as np

@@ -214,7 +214,7 @@ def label_ids_to_bg0_format(label_ids: np.ndarray) -> np.ndarray:
     return label_ids + 1
 
 
-def label_ids_from_bg0_format(bg0_labels: np.ndarray) -> np.ndarray:
+def y(bg0_labels: np.ndarray) -> np.ndarray:
     """
     Convert BG0 foreground labels back to annotation/internal label IDs.
 

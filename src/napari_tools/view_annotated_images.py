@@ -27,10 +27,7 @@ from configs.config import (
 )
 
 from src.utilities import load_image
-from src.nn_input_prepare import (
-    pair_split_images_with_annotations,
-    parse_annotation_txt_rc,
-)
+from nn_anotation_io import pair_split_images_with_annotations, parse_annotation_txt_rc
 
 from src.napari_tools.napari_box_adapters import (
     boxes_rc_to_napari_rectangles,

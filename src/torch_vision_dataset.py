@@ -13,9 +13,7 @@ from configs.config import (
     NN_EXPECTED_NUM_CHANNELS,
 )
 
-from .nn_input_prepare import (
-    pair_split_images_with_annotations, parse_annotation_txt_rc,
-)
+from nn_anotation_io import pair_split_images_with_annotations, parse_annotation_txt_rc
 
 from torchvision import tv_tensors
 
@@ -25,102 +23,7 @@ from .nn_adapters import (
 )
 
 
-def load_annotation_format(annotation_format_path: str | Path) -> dict[str, Any]:
-    """
-    Load the dataset-level annotation format JSON.
-
-    This file describes how the source annotation txt files should be read.
-    It does not describe TorchVision targets.
-    """
-    annotation_format_path = Path(annotation_format_path)
-
-    if not annotation_format_path.exists():
-        raise FileNotFoundError(
-            f"Annotation format JSON does not exist: {annotation_format_path}"
-        )
-
-    if not annotation_format_path.is_file():
-        raise ValueError(
-            f"Annotation format path is not a file: {annotation_format_path}"
-        )
-
-    with annotation_format_path.open("r", encoding="utf-8") as f:
-        annotation_format = json.load(f)
-
-    if not isinstance(annotation_format, dict):
-        raise ValueError(
-            f"Annotation format JSON must contain an object/dict, "
-            f"got {type(annotation_format).__name__}"
-        )
-
-    return annotation_format
-
-def validate_source_annotation_format(annotation_format: dict[str, Any]) -> None:    
-        """
-        Validate that the source annotation format is supported by the current parser.
-
-        Current supported source annotation format:
-
-            class row_min col_min row_max col_max
-
-        Internally, parse_annotation_txt_rc expects:
-            labels    from column 0
-            boxes_rc  from columns [1, 2, 3, 4]
-            boxes_rc order = [row_min, col_min, row_max, col_max]
-        """
-        required = {
-            "delimiter",
-            "has_header",
-            "class_column",
-            "box_columns",
-            "source_box_format",
-            "source_label_base",
-        }
-
-        missing = sorted(required - set(annotation_format.keys()))
-        if missing:
-            raise ValueError(
-                f"Annotation format is missing required fields: {missing}"
-            )
-
-        if annotation_format["delimiter"] != "whitespace":
-            raise ValueError(
-                f"Only whitespace-delimited annotations are supported for now, "
-                f"got {annotation_format['delimiter']!r}"
-            )
-
-        if bool(annotation_format["has_header"]) is not False:
-            raise ValueError(
-                f"Only headerless annotation txt files are supported for now, "
-                f"got has_header={annotation_format['has_header']!r}"
-            )
-
-        if int(annotation_format["class_column"]) != 0:
-            raise ValueError(
-                f"Current parser expects class_column=0, "
-                f"got {annotation_format['class_column']!r}"
-            )
-
-        if list(annotation_format["box_columns"]) != [1, 2, 3, 4]:
-            raise ValueError(
-                f"Current parser expects box_columns=[1, 2, 3, 4], "
-                f"got {annotation_format['box_columns']!r}"
-            )
-
-        if annotation_format["source_box_format"] != "ROW_COL_MINMAX":
-            raise ValueError(
-                f"Current parser expects source_box_format='ROW_COL_MINMAX', "
-                f"got {annotation_format['source_box_format']!r}"
-            )
-
-        if int(annotation_format["source_label_base"]) != 0:
-            raise ValueError(
-                f"Current label adapter expects source_label_base=0, "
-                f"got {annotation_format['source_label_base']!r}"
-            )
-
-
-def npy_to_torch_tensor(    
+def npy_to_torch_tensor(
             npy_path: str | Path,
             *,
             expected_num_channels: int | None = NN_EXPECTED_NUM_CHANNELS,

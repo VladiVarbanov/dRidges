@@ -26,9 +26,8 @@ from src.nn_input_prepare import (
     build_nn_hog_norm_channel,
     build_nn_vesselness_channel,
     build_nn_input_img,
-    pair_split_images_with_annotations,
-    parse_annotation_txt_rc,
 )
+from nn_anotation_io import pair_split_images_with_annotations, parse_annotation_txt_rc
 from nn_adapters import rows_cols_to_xywh
 
 from src.utilities import (
