@@ -10,7 +10,7 @@ from configs.config import (NN_ANN_EXT,
                             NN_HESSIAN_SCALE_PX,
                             )
 
-from nn_anotation_io import resolve_annotation_path, pair_split_images_with_annotations
+from .annotation_io import resolve_annotation_path, pair_split_images_with_annotations
 from .utilities import collect_images_paths, load_image, ensure_dir
 from typing import Callable
 from .preprocessing import to_gray_normalized, local_normalize_HOG_style

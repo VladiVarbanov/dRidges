@@ -8,7 +8,7 @@ import numpy as np
 from .debug_io import save_rgba_tiff
 from .preprocessing import to_gray_normalized
 from .utilities import rgba_from_gray, save_rgba_tiff_from_gray, load_image, collect_images_paths, ensure_dir
-from nn_anotation_io import parse_annotation_txt_rc
+from annotation_io import parse_annotation_txt_rc
 from .nn_adapters import rows_cols_to_xywh
 
 # Optional: if you keep ALFA_VALUE in config (normalized in [0,1])

@@ -6,7 +6,7 @@ from typing import Sequence
 import numpy as np
 
 from configs.config import NN_ANN_EXT
-from utilities import ensure_dir, load_image
+from .utilities import ensure_dir, load_image
 
 
 def resolve_annotation_path(image_path: Path, ann_ext: str = NN_ANN_EXT) -> Path:

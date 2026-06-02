@@ -13,7 +13,7 @@ from configs.config import (
     NN_EXPECTED_NUM_CHANNELS,
 )
 
-from nn_anotation_io import pair_split_images_with_annotations, parse_annotation_txt_rc
+from .annotation_io import pair_split_images_with_annotations, parse_annotation_txt_rc
 
 from torchvision import tv_tensors
 

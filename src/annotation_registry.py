@@ -99,7 +99,7 @@ def write_derived_annotation_format_json(
         json.dump(payload, f, indent=4, ensure_ascii=False)
 
 
-def load_annotation_format(annotation_format_path: str | Path) -> dict[str, Any]:
+def load_annotation_format_json(annotation_format_path: str | Path) -> dict[str, Any]:
     """
     Load the dataset-level annotation format JSON.
 

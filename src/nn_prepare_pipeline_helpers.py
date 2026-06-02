@@ -17,7 +17,7 @@ from .debug_io import save_rgba_tiff
 
 from . nn_input_prepare import (
     build_nn_input_img)
-from nn_anotation_io import parse_annotation_txt_rc
+from annotation_io import parse_annotation_txt_rc
 from nn_adapters import rows_cols_to_xywh
 
 from .visualization import paint_labeled_xywh_boxes_in_place

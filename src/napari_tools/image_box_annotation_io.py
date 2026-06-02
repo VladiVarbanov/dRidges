@@ -36,7 +36,7 @@ from configs.config import (
 )
 
 from src.utilities import load_image
-from nn_anotation_io import pair_split_images_with_annotations, parse_annotation_txt_rc
+from annotation_io import pair_split_images_with_annotations, parse_annotation_txt_rc
 
 
 def load_source_annotation_format(
