@@ -5,11 +5,8 @@ from typing import Iterable, Tuple
 
 import numpy as np
 
-from .debug_io import save_rgba_tiff
-from .preprocessing import to_gray_normalized
 from .utilities import rgba_from_gray, save_rgba_tiff_from_gray, load_image, collect_images_paths, ensure_dir
-from annotation_io import parse_annotation_txt_rc
-from .nn_adapters import rows_cols_to_xywh
+
 
 # Optional: if you keep ALFA_VALUE in config (normalized in [0,1])
 try:
@@ -295,6 +292,51 @@ def paint_xywh_boxes_in_place(
         image_rgba[row_start:row_end + 1, max(col_end - lw + 1, 0):col_end + 1, 3] = alpha_u8
 
 
+def scale_xywh_boxes_about_center(
+    boxes_xywh: np.ndarray,
+    *,
+    scale_factor: float,
+) -> np.ndarray:
+    """
+    Scale XYWH boxes about their own centers.
+
+    boxes_xywh format:
+        [x, y, width, height]
+
+    The box center stays fixed. Only width and height change.
+    """
+    boxes_xywh = np.asarray(boxes_xywh, dtype=np.float32)
+
+    if boxes_xywh.ndim != 2 or boxes_xywh.shape[1] != 4:
+        raise ValueError(
+            f"boxes_xywh must have shape (N, 4), got {boxes_xywh.shape}"
+        )
+
+    if scale_factor <= 0.0:
+        raise ValueError(
+            f"scale_factor must be positive, got {scale_factor}"
+        )
+
+    x = boxes_xywh[:, 0]
+    y = boxes_xywh[:, 1]
+    width = boxes_xywh[:, 2]
+    height = boxes_xywh[:, 3]
+
+    center_x = x + 0.5 * width
+    center_y = y + 0.5 * height
+
+    scaled_width = width * float(scale_factor)
+    scaled_height = height * float(scale_factor)
+
+    scaled_x = center_x - 0.5 * scaled_width
+    scaled_y = center_y - 0.5 * scaled_height
+
+    return np.stack(
+        (scaled_x, scaled_y, scaled_width, scaled_height),
+        axis=1,
+    ).astype(np.float32, copy=False)
+
+
 def paint_labeled_xywh_boxes_in_place(
     image_rgba: np.ndarray,
     boxes_xywh: np.ndarray,
@@ -304,6 +346,7 @@ def paint_labeled_xywh_boxes_in_place(
     default_color: tuple[int, int, int] = (255, 255, 255),
     alfa_value: float | None = None,
     line_width: int = 2,
+    scale_factor: float = 1.0,
 ) -> None:
     """
     Paint XYWH boxes into an RGBA image in place, using one color per class label.
@@ -348,6 +391,12 @@ def paint_labeled_xywh_boxes_in_place(
         raise ValueError(
             f"labels and boxes_xywh must have same length, "
             f"got {len(labels)} and {len(boxes_xywh)}"
+        )
+
+    if scale_factor != 1.0:
+        boxes_xywh = scale_xywh_boxes_about_center(
+            boxes_xywh,
+            scale_factor=scale_factor,
         )
 
     unique_labels = np.unique(labels)

@@ -175,7 +175,7 @@ def validate_source_annotation_format(annotation_format: dict[str, Any]) -> None
                 f"Current parser expects class_column=0, "
                 f"got {annotation_format['class_column']!r}"
             )
-
+#TODO fix annotation registry
         if list(annotation_format["box_columns"]) != [1, 2, 3, 4]:
             raise ValueError(
                 f"Current parser expects box_columns=[1, 2, 3, 4], "
