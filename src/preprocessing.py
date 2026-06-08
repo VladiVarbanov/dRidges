@@ -4,7 +4,6 @@ import numpy as np
 from skimage import exposure, filters
 from skimage.exposure import rescale_intensity
 from skimage.filters import gaussian
-from sympy import false
 from configs.config import EPS, LOCAL_NORM_SIGMA, GAUSSIAN_SMOOTH_SIGMA
 from .utilities import (
     save_outputs_with_metadata,

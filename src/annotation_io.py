@@ -599,7 +599,7 @@ def derive_box_annotations_from_src(
     annotation_format_name: str = "redacted_merged_ovals_expanded_black_dots_v1",
     ann_ext: str = NN_ANN_EXT,
     max_images: int | None = None,
-) -> list[dict]:
+) -> None:
     """
     Derive copied box annotations from source annotations.
 
@@ -627,8 +627,6 @@ def derive_box_annotations_from_src(
         require_annotation=True,
         max_images=max_images,
     )
-
-    records: list[dict] = []
 
     for image_id, (image_path, src_annotation_path) in enumerate(pairs):
         if src_annotation_path is None:

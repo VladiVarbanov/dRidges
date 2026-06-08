@@ -120,9 +120,6 @@ def load_image(input_path: str | Path):
         raise FileNotFoundError(f"Could not read image: {input_path}")
     return img
     
-from pathlib import Path
-from typing import Iterable
-
 # ---- Input scanning ----
 
 DEFAULT_IMAGE_EXTS: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp")

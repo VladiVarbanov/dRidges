@@ -1,5 +1,7 @@
 # configs/config.py
 
+import os
+import sys
 from pathlib import Path
 #from functools import partial
 #from typing import Callable
@@ -92,7 +94,13 @@ NN_CLASS_NAMES = {
 }
 
 # ----- Workspace root -----
-WORKSPACE = Path("C:/AtomAI_ws")
+# Resolve workspace: ATOMAI_WORKSPACE env var > platform default
+def _default_workspace() -> Path:
+    if sys.platform == "win32":
+        return Path("C:/AtomAI_ws")
+    return Path.home() / "AtomAi_ws"
+
+WORKSPACE = Path(os.environ.get("ATOMAI_WORKSPACE", str(_default_workspace())))
 
 # ----- Data subdirectories -----
 DATA_DIR = WORKSPACE / "data"
