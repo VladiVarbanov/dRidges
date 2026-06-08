@@ -1,3 +1,9 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from configs.config import NN_DATASET_ROOT
+
 EPS = 1e-6  #TODO: duplicated
 
 AREA_LOG_EPS = 1e-6   #TODO duplicated
@@ -26,3 +32,19 @@ GMM_RANDOM_STATE = 0
 GMM_N_INIT = 10
 
 GMM_SCALE_EVIDENCE_NAME = "gmm_scale"
+
+# GMM label → redacted class mapping
+# GMM label 0 = small boxes → black_dot → redacted class 1
+# GMM label 1 = large boxes → merged loops → redacted class 0
+GMM_SCALE_LABEL_TO_REDACTED_CLASS = {
+    0: 1,
+    1: 0,
+}
+
+# GMM annotation correction settings
+GMM_BOX_SCALE_FACTOR = 1.08
+GMM_CORRECTED_ANNOTATION_DIR = NN_DATASET_ROOT / "bounding_boxes_redacted_gmm_corrected"
+
+# GMM overlay inspection settings
+GMM_OVERLAY_TOP_DISAGREEMENTS = 30
+GMM_OVERLAY_MAX_UNIQUE_IMAGES = 10

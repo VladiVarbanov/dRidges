@@ -344,7 +344,16 @@ def save_processed_parameters(params_df: pd.DataFrame, path: str | Path):
     ensure_dir(path.parent)
     params_df.to_csv(path, index=False)
 
-    def save_nn_input_npy_channels_as_tiffs(
+
+def load_csv_table(csv_path: str | Path) -> pd.DataFrame:
+    """Load a CSV file into a pandas DataFrame."""
+    csv_path = Path(csv_path)
+    if not csv_path.exists():
+        raise FileNotFoundError(f"CSV file not found: {csv_path}")
+    return pd.read_csv(csv_path)
+
+
+def save_nn_input_npy_channels_as_tiffs(
             npy_path: str | Path,
             output_dir: str | Path,
     ) -> list[Path]:

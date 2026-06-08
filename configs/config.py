@@ -115,9 +115,14 @@ NN_DATASET_ROOT = WORKSPACE / "DataSetFinal"
 NN_IMAGE_DIR = NN_DATASET_ROOT / "images"
 NN_INPUT_NPY_DIR = NN_DATASET_ROOT / "nn_input_npy"
 NN_ANNOTATION_DIR = NN_DATASET_ROOT / "bounding_boxes"
+NN_REDACTED_ANNOTATION_DIR = NN_DATASET_ROOT / "bounding_boxes_redacted"
 NN_TRAIN_SPLIT_TXT = NN_DATASET_ROOT / "trainimages.txt"
 NN_TEST_SPLIT_TXT = NN_DATASET_ROOT / "testimages.txt"
 NN_ALL_SPLIT_TXT = NN_DATASET_ROOT / "allimages.txt"
+
+# ----- GMM scale evidence outputs -----
+GMM_SCALE_EVIDENCE_OUTPUT_DIR = RESULTS_DIR / "gmm_scale_evidence"
+GMM_SCALE_OVERLAY_DIR = GMM_SCALE_EVIDENCE_OUTPUT_DIR / "source_vs_gmm_scale_overlays"
 
 
 # ----- Default pipeline settings -----
