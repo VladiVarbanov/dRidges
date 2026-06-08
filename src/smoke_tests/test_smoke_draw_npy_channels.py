@@ -2,9 +2,9 @@ from pathlib import Path
 
 import numpy as np
 
-from debug_io import save_rgba_tiff
-from torch_vision_dataset import TorchVisionDataset
-from utilities import rgba_from_gray
+from src.debug_io import save_rgba_tiff
+from src.torch_vision_dataset import TorchVisionDataset
+from src.utilities import rgba_from_gray
 
 
 def main():

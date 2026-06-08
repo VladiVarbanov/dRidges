@@ -44,16 +44,19 @@ def move_targets_to_device(targets, device):
 
 
 def main():
-    root = Path("../../DataSetFinal")
-    checkpoint_path = Path("../../checkpoints/test_smoke_tiny_overfit.pth")
+    ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+    data_root = ROOT_DIR / "DataSetFinal"
+    output_root = ROOT_DIR / "results"
+
+    checkpoint_path = output_root / "checkpoints/test_smoke_tiny_overfit.pth"
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-    #TODO: use config paths
+
     dataset = TorchVisionDataset(
-        split_path=root / "trainimages.txt",
-        image_dir=root / "images",
-        annotation_dir=root / "bounding_boxes",
-        npy_dir=root / "nn_input_npy",
-        annotation_format_path=root / "annotation_format.json",
+        split_path=data_root / "trainimages.txt",
+        image_dir=data_root / "images",
+        annotation_dir=data_root / "bounding_boxes_redacted_gmm_corrected",
+        npy_dir=data_root / "nn_input_npy",
+        annotation_format_path=data_root / "annotation_format.json",
         max_images=2,
     )
 

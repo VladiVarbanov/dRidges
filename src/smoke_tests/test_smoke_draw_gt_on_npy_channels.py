@@ -3,11 +3,11 @@ from pathlib import Path
 import numpy as np
 
 from configs.config import NN_CLASS_COLORS_GT
-from debug_io import save_rgba_tiff
-from nn_adapters import label_ids_from_bg0_format, xyxy_to_xywh
-from torch_vision_dataset import TorchVisionDataset
-from utilities import rgba_from_gray
-from visualization import paint_labeled_xywh_boxes_in_place
+from src.debug_io import save_rgba_tiff
+from src.nn_adapters import label_ids_from_bg0_format, xyxy_to_xywh
+from src.torch_vision_dataset import TorchVisionDataset
+from src.utilities import rgba_from_gray
+from src.visualization import paint_labeled_xywh_boxes_in_place
 
 
 def main():

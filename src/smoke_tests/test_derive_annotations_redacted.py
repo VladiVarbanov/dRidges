@@ -7,7 +7,7 @@ from configs.config import (
     NN_DATASET_ROOT,
 )
 
-from annotation_io import derive_box_annotations_from_src
+from src.annotation_io import derive_box_annotations_from_src
 
 
 def main() -> None:

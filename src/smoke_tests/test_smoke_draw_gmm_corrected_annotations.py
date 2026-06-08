@@ -4,13 +4,22 @@ from pathlib import Path
 
 import numpy as np
 
-from configs.config import NN_ANN_EXT, NN_REDACTED_ANNOTATION_DIR
+from configs.config import (
+    NN_ANN_EXT,
+    NN_REDACTED_ANNOTATION_DIR,
+    NN_IMAGE_DIR,
+    NN_DATASET_ROOT,
+    RESULTS_VIS_DIR,
+)
+from configs.object_features_config import (
+    GMM_CORRECTED_ANNOTATION_DIR,
+)
 
 from src.debug_io import save_rgba_tiff
 from src.nn_adapters import rows_cols_to_xywh
 from src.annotation_io import parse_annotation_txt_rc
 from src.preprocessing import to_gray_normalized
-from src.utilities import collect_images_paths, load_image, rgba_from_gray
+from src.utilities import collect_images_paths, load_image, rgba_from_gray, ensure_dir
 from src.visualization import paint_labeled_xywh_boxes_in_place
 
 
@@ -48,19 +57,23 @@ def build_image_lookup_by_stem(image_dir: Path) -> dict[str, Path]:
 
 
 def main() -> None:
-    root = Path("../../DataSetFinal")
+    image_dir = NN_IMAGE_DIR
 
-    image_dir = root / "images"
-    annotation_dir = root / "bounding_boxes_redacted"
+    # Try GMM corrected annotations first, fall back to redacted
+    if GMM_CORRECTED_ANNOTATION_DIR.exists():
+        annotation_dir = GMM_CORRECTED_ANNOTATION_DIR
+        print("Using GMM-corrected annotations")
+    else:
+        annotation_dir = NN_REDACTED_ANNOTATION_DIR
+        print("Using original redacted annotations")
 
-    output_dir = Path("../../results/test_smoke_draw_all_redacted_annotations")
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = ensure_dir(RESULTS_VIS_DIR / "test_smoke_draw_gmm_corrected_annotations")
 
     image_lookup = build_image_lookup_by_stem(image_dir)
 
     annotation_paths = sorted(annotation_dir.glob(f"*{NN_ANN_EXT}"))
 
-    print(f"redacted annotation files found: {len(annotation_paths)}")
+    print(f"annotation files found: {len(annotation_paths)}")
     print(f"images found: {len(image_lookup)}")
 
     for annotation_path in annotation_paths:
@@ -100,7 +113,7 @@ def main() -> None:
 
         output_path = (
             output_dir /
-            f"{annotation_path.stem}_redacted_annotations.tif"
+            f"{annotation_path.stem}_gmm_corrected_annotations.tif"
         )
 
         save_rgba_tiff(source_rgba, output_path)

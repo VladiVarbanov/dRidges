@@ -9,14 +9,15 @@ from src.torch_vision_dataset import TorchVisionDataset
 
 
 def main():
-    root = Path("../../DataSetFinal")
+    ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+    data_root = ROOT_DIR / "DataSetFinal"
 
     dataset = TorchVisionDataset(
-        split_path=root / "trainimages.txt",
-        image_dir=root / "images",
-        annotation_dir=root / "bounding_boxes",
-        npy_dir=root / "nn_input_npy",
-        annotation_format_path=root / "annotation_format.json",
+        split_path=data_root / "trainimages.txt",
+        image_dir=data_root / "images",
+        annotation_dir=data_root / "bounding_boxes_redacted_gmm_corrected",
+        npy_dir=data_root / "nn_input_npy",
+        annotation_format_path=data_root / "annotation_format.json",
         max_images=1,
     )
 

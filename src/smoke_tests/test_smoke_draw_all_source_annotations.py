@@ -1,9 +1,9 @@
 from pathlib import Path
-from debug_io import save_rgba_tiff
-from nn_adapters import rows_cols_to_xywh
-from annotation_io import parse_annotation_txt_rc
-from utilities import load_image, rgba_from_gray
-from visualization import paint_labeled_xywh_boxes_in_place
+from src.debug_io import save_rgba_tiff
+from src.nn_adapters import rows_cols_to_xywh
+from src.annotation_io import parse_annotation_txt_rc
+from src.utilities import load_image, rgba_from_gray
+from src.visualization import paint_labeled_xywh_boxes_in_place
 from configs.config import NN_CLASS_COLORS, NN_CLASS_COLORS_GT, NN_ANN_EXT
 import numpy as np
 

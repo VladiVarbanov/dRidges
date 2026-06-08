@@ -5,22 +5,24 @@ from torchvision.models.detection import fasterrcnn_resnet50_fpn
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 from configs.config import NN_CLASS_COLORS, NN_CLASS_COLORS_GT
-from debug_io import save_rgba_tiff
-from nn_adapters import xyxy_to_xywh, label_ids_from_bg0_format
-from torch_vision_dataset import TorchVisionDataset
-from utilities import load_image, rgba_from_gray
-from visualization import paint_labeled_xywh_boxes_in_place
+from src.debug_io import save_rgba_tiff
+from src.nn_adapters import xyxy_to_xywh, label_ids_from_bg0_format
+from src.torch_vision_dataset import TorchVisionDataset
+from src.utilities import load_image, rgba_from_gray
+from src.visualization import paint_labeled_xywh_boxes_in_place
 
 
 def main():
-    root = Path("../../DataSetFinal")
+    ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+    data_root = ROOT_DIR / "DataSetFinal"
+    output_root = ROOT_DIR / "results"
 
     dataset = TorchVisionDataset(
-        split_path=root / "trainimages.txt",
-        image_dir=root / "images",
-        annotation_dir=root / "bounding_boxes",
-        npy_dir=root / "nn_input_npy",
-        annotation_format_path=root / "annotation_format.json",
+        split_path=data_root / "trainimages.txt",
+        image_dir=data_root / "images",
+        annotation_dir=data_root / "bounding_boxes_redacted_gmm_corrected",
+        npy_dir=data_root / "nn_input_npy",
+        annotation_format_path=data_root / "annotation_format.json",
         max_images=1,
     )
 
@@ -35,7 +37,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    checkpoint_path = Path("../../checkpoints/test_smoke_tiny_overfit.pth")
+    checkpoint_path = output_root / "checkpoints/test_smoke_tiny_overfit.pth"
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
 
@@ -86,7 +88,7 @@ def main():
         line_width=2,
     )
 
-    output_path = Path("../../results/smoke_predictions/prediction_vs_gt.tif")
+    output_path = output_root / "smoke_predictions/prediction_vs_gt.tif"
     save_rgba_tiff(image_rgba, output_path)
 
     print(f"source image: {source_image_path}")
