@@ -26,4 +26,4 @@ AUGMENTED_DATA_DIR = NN_IMAGE_DIR.parent / "augmented_v1"
 
 # ----- Number of classes -----
 # 4 classes (a0_half_111_loop, a0_100_loop, black_dot, other_defect) + 1 (background) = 5
-NUM_CLASSES = 5
+NUM_CLASSES = 4

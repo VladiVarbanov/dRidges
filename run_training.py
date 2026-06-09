@@ -228,10 +228,12 @@ def main():
     
     for epoch in range(TRAINING_NUM_EPOCHS):
         # --- Train ---
+        print(f"\nEpoch {epoch + 1}/{TRAINING_NUM_EPOCHS}")
         model.train()
         train_loss = 0
         train_batches = 0
-        for images, targets in train_loader:
+        for batch_idx, (images, targets) in enumerate(train_loader):
+            print(f"epoch {epoch + 1}, batch {batch_idx}, num images {len(images)}")
             if len(images) == 0:
                 continue
             
@@ -244,7 +246,9 @@ def main():
             optimizer.zero_grad()
             losses.backward()
             optimizer.step()
-            
+
+            print(f"batch {batch_idx} loss: {float(losses.item()):.4f}")
+
             train_loss += losses.item()
             train_batches += 1
         
