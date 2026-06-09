@@ -158,6 +158,46 @@ def xyxy_to_xywh(boxes_xyxy: np.ndarray) -> np.ndarray:
     return np.stack((x, y, w, h), axis=1).astype(np.float32, copy=False)
 
 
+def xyxy_to_rows_cols(boxes_xyxy: np.ndarray) -> np.ndarray:
+    """
+    Convert boxes from XYXY format:
+
+        [x_min, y_min, x_max, y_max]
+
+    to row/col corner format:
+
+        [y_min, x_min, y_max, x_max]
+
+    This is the inverse of rows_cols_to_xyxy.
+
+    Parameters
+    ----------
+    boxes_xyxy
+        np.ndarray of shape (N, 4)
+
+    Returns
+    -------
+    boxes_rc
+        np.ndarray of shape (N, 4), dtype float32
+    """
+    boxes_xyxy = np.asarray(boxes_xyxy, dtype=np.float32)
+
+    if boxes_xyxy.ndim != 2 or boxes_xyxy.shape[1] != 4:
+        raise ValueError(
+            f"xyxy_to_rows_cols expects shape (N, 4), got {boxes_xyxy.shape}"
+        )
+
+    x_min = boxes_xyxy[:, 0]
+    y_min = boxes_xyxy[:, 1]
+    x_max = boxes_xyxy[:, 2]
+    y_max = boxes_xyxy[:, 3]
+
+    return np.stack((y_min, x_min, y_max, x_max), axis=1).astype(
+        np.float32,
+        copy=False,
+    )
+
+
 def define_rois_for_framework(
     # Legacy/future framework adapter.
     # Not used by the first TorchVision Faster R-CNN Dataset path.

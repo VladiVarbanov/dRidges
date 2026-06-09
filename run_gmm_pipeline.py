@@ -214,7 +214,7 @@ def main() -> None:
 
         image_stem = Path(str(image_name)).stem
         output_path = (
-            overlay_dir / f"{image_stem}_source_and_gmm.png"
+            overlay_dir / f"{image_stem}_source_and_gmm.tif"
         )
 
         # Load image
